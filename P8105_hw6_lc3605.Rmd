@@ -34,9 +34,31 @@ birthweight = read_csv("./data/birthweight.csv")
 
 ## Clean the data 
 
-birthweight %>% 
+birthweight = birthweight %>% 
   janitor::clean_names() %>% 
   mutate(
-    babysex = factor(babysex, labels = c("male", "female")))
+    babysex = factor(babysex, levels = c("1", "2")),
+    babysex = fct_recode(babysex, "Female" = "2", "Male" = "1"),
+    frace = factor(frace, 
+                       levels = c("1", "2", "3", "4", "5", "6", "7", "8", "9")),
+    frace = fct_recode(frace, 
+                       "White" = "1",
+                       "Black" = "2",
+                       "Asian" = "3",
+                       "Puerto Rican" = "4", 
+                       "Other" = "8",
+                       "Unknown" = "9"),
+    malform = factor(malform, labels = c("Absent", "Present")),
+    mrace = factor(mrace,  c(1, 2, 3, 4, 8)),
+    mrace = fct_recode(mrace, 
+                       "White" = "1",
+                       "Black" = "2",
+                       "Asian" = "3",
+                       "Puerto Rican" = "4", 
+                       "Other" = "8"))
+
+## check for missing values
+apply(is.na(birthweight),2,sum)
 ```
 
+There are no missing values in the data!! YAY!    
