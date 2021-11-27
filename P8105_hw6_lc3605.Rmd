@@ -170,9 +170,39 @@ birthweight_cv %>%
     y = "Root Mean Squared Error (RMSE)") 
 ```
 
-
-Based on the violin plot, we see that the `fit` model has the lowest relative RMSE which indicates a better fit, so we conclude that it fits the data better than `model_2` and `model_3`.
-
+* Based on the violin plot, we see that the `fit` model has the lowest relative RMSE which indicates a better fit, so we conclude that it fits the data better than `model_2` and `model_3`.
 
 
+## Problem 2:
+
+```{r, warning = FALSE}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything()) 
+```
+
+
+```{r}
+boot_strap = 
+  weather_df %>% 
+  bootstrap(n = 5000, id = "strap_number") %>% 
+  mutate(
+    models = map(.x = strap, ~lm(tmax ~ tmin, data = .x)),
+    tidy = map(models, broom::tidy),
+    results_glance = map(models, broom::glance)) %>% 
+  unnest(tidy, results_glance) %>% 
+  select(strap_number, r.squared, term, estimate) %>% 
+  pivot_wider(
+    names_from = "term",
+    values_from = "estimate"
+  ) 
+```
 
