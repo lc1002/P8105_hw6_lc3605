@@ -6,10 +6,9 @@ output: github_document
 
 ```{r setup, include = FALSE}
 library(tidyverse)
-library(dplyr)
+library(modelr)
 library(readxl)
 library(ggplot2)
-library(p8105.datasets)
 
 
 knitr::opts_chunk$set(
@@ -59,6 +58,63 @@ birthweight = birthweight %>%
 
 ## check for missing values
 apply(is.na(birthweight),2,sum)
+sum(!complete.cases(birthweight))
+
 ```
 
+* This dataset contains `r nrow(birthweight)` rows and `r ncol(birthweight)` columns. 
 There are no missing values in the data!! YAY!    
+
+
+For the regression model, in order to choose more meaningful set of predictors for the ultimal model I use stepwise regression with backward selection.
+
+```{r stepwise}
+model_1 = 
+  lm(bwt ~ ., data = birthweight) %>% 
+  step(direction = "backward", trace = 0) %>% 
+  broom::tidy() %>% 
+  knitr::kable()
+```
+
+The chosen model include predictors:`babysex`, `bhead`, `blength`, `delwt`, `fincome`, `gaweeks`, `mheight`, `mrace`, `parity`, `ppwt`, and `smoken`. 
+
+```{r fit model}
+fit = lm(bwt ~ babysex + bhead + blength + delwt + fincome + gaweeks + mheight + mrace + parity + ppwt + smoken, data = birthweight) 
+summary(fit)
+
+birthweight %>% 
+    add_predictions(fit) %>% 
+    add_residuals(fit) %>% 
+    ggplot(aes(x = pred, y = resid)) +
+    geom_point(alpha = 0.2)  + 
+    geom_smooth(se = F, color = "red", method = "lm", size = 1, linetype = 2) + 
+    labs(title = "Residuals vs. Predicted Values", 
+       x = "Predicted", 
+       y = "Residuals")
+```
+
+According to the residuals against fitted values plot, the residuals are roughly symmetrical around y = 0. The residuals seems to be evenly distributed and the normal distribution of residuals assumption is satisfied for linear regression. There are a few data points with low fitted values and high residuals, majority of data points cluster around predicted values 2500 - 4000.
+
+### Compare models
+
+* **Model 2**: bwt ~ blength + gaweeks
+
+* **Model 3**: bwt ~ babysex + blength + bhead + babysex * blength + babysex * bhead + blength * bhead + babysex * blength * bhead
+
+```{r}
+model_2 = 
+  lm(bwt ~ blength + gaweeks, data = birthweight) %>% 
+  broom::tidy() %>% 
+  knitr::kable()
+
+model_3 = 
+  lm(bwt ~ babysex * blength * bhead, data = birthweight) %>% 
+  broom::tidy() %>% 
+  knitr::kable()
+
+```
+
+
+  
+
+
