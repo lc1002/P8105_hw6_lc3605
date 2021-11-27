@@ -59,14 +59,13 @@ birthweight = birthweight %>%
 ## check for missing values
 apply(is.na(birthweight),2,sum)
 sum(!complete.cases(birthweight))
-
 ```
 
 * This dataset contains `r nrow(birthweight)` rows and `r ncol(birthweight)` columns. 
 There are no missing values in the data!! YAY!    
 
 
-For the regression model, in order to choose more meaningful set of predictors for the ultimal model I use stepwise regression with backward selection.
+For the regression model, in order to choose more meaningful set of predictors for the most appropriate model, I use stepwise regression with backward selection.
 
 ```{r stepwise}
 model_1 = 
@@ -102,19 +101,78 @@ According to the residuals against fitted values plot, the residuals are roughly
 * **Model 3**: bwt ~ babysex + blength + bhead + babysex * blength + babysex * bhead + blength * bhead + babysex * blength * bhead
 
 ```{r}
-model_2 = 
-  lm(bwt ~ blength + gaweeks, data = birthweight) %>% 
+model_2 = lm(bwt ~ blength + gaweeks, data = birthweight) 
+
+model_2 %>% 
   broom::tidy() %>% 
   knitr::kable()
 
-model_3 = 
-  lm(bwt ~ babysex * blength * bhead, data = birthweight) %>% 
+birthweight %>% 
+  add_predictions(model_2) %>% 
+  add_residuals(model_2) %>% 
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(se = F, color = "red", method = "lm", size = 1, linetype = 2) + 
+    labs(title = "Residuals vs. Predicted Values", 
+       x = "Predicted", 
+       y = "Residuals")
+
+model_3 = lm(bwt ~ babysex * blength * bhead, data = birthweight) 
+model_3 %>% 
   broom::tidy() %>% 
   knitr::kable()
 
+birthweight %>% 
+  add_predictions(model_3) %>% 
+  add_residuals(model_3) %>% 
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(se = F, color = "red", method = "lm", size = 1, linetype = 2) + 
+    labs(title = "Residuals vs. Predicted Values", 
+       x = "Predicted", 
+       y = "Residuals")
+```
+
+```{r, cross validation, warning = FALSE}
+birthweight_cv = 
+  crossv_mc(birthweight, n = 100) %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble)
+  ) %>% 
+mutate(
+    fit = map(.x = train, ~lm(bwt ~ babysex + bhead + blength + delwt + fincome + gaweeks + mheight + mrace + parity + ppwt + smoken, data = .x)),
+    model_2 = map(.x = train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+    model_3 = map(.x = train, ~lm(bwt ~ babysex * blength * bhead, data = .x))
+  ) %>% 
+  mutate(
+    rmse_fit = map2_dbl(.x = fit, .y = test, ~rmse(model = .x, data = .y)),
+    rmse_model_2 = map2_dbl(.x = model_2, .y = test, ~rmse(model = .x, data = .y)),
+    rmse_model_3 = map2_dbl(.x = model_3, .y = test, ~rmse(model = .x, data = .y))
+  ) 
+```
+
+### Violin plot for RMSE 
+
+```{r plot}
+birthweight_cv %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") %>%   
+  ggplot(aes(x = model, y = rmse)) +
+  geom_violin() +
+  labs(
+    title = "Cross Validation of the Models",
+    x = "Models",
+    y = "Root Mean Squared Error (RMSE)") 
 ```
 
 
-  
+Based on the violin plot, we see that the `fit` model has the lowest relative RMSE which indicates a better fit, so we conclude that it fits the data better than `model_2` and `model_3`.
+
+
 
 
