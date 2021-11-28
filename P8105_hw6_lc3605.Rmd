@@ -65,7 +65,7 @@ sum(!complete.cases(birthweight))
 There are no missing values in the data!! YAY!    
 
 
-For the regression model, in order to choose more meaningful set of predictors for the most appropriate model, I use stepwise regression with backward selection.
+For the regression model, in order to choose more meaningful set of predictors for the most appropriate model, I use stepwise regression with backward selection which will starts with a  saturated model and eliminates variables each step to find a final model that best explains the birthweight data. 
 
 ```{r stepwise}
 model_1 = 
@@ -75,7 +75,7 @@ model_1 =
   knitr::kable()
 ```
 
-The chosen model include predictors:`babysex`, `bhead`, `blength`, `delwt`, `fincome`, `gaweeks`, `mheight`, `mrace`, `parity`, `ppwt`, and `smoken`. 
+The chosen model after performing stepwise regression include the following predictors:`babysex`, `bhead`, `blength`, `delwt`, `fincome`, `gaweeks`, `mheight`, `mrace`, `parity`, `ppwt`, and `smoken`. 
 
 ```{r fit model}
 fit = lm(bwt ~ babysex + bhead + blength + delwt + fincome + gaweeks + mheight + mrace + parity + ppwt + smoken, data = birthweight) 
@@ -176,6 +176,7 @@ birthweight_cv %>%
 ## Problem 2:
 
 ```{r, warning = FALSE}
+## load the data
 weather_df = 
   rnoaa::meteo_pull_monitors(
     c("USW00094728"),
@@ -190,7 +191,9 @@ weather_df =
 ```
 
 
-```{r}
+### Bootstrapping 
+
+```{r, warning = FALSE}
 boot_strap = 
   weather_df %>% 
   bootstrap(n = 5000, id = "strap_number") %>% 
@@ -203,6 +206,59 @@ boot_strap =
   pivot_wider(
     names_from = "term",
     values_from = "estimate"
-  ) 
+  ) %>% 
+  janitor::clean_names() %>%
+  rename(
+    beta_0 = intercept,
+    beta_1 = tmin
+  ) %>% 
+  mutate(log_fct = log(beta_0 * beta_1))
 ```
+
+
+### R Squared
+
+```{r}
+boot_strap %>%
+  ggplot(aes(x = r_squared)) +
+  geom_density() +
+  labs(
+    title = "Distribution of" ~R^2,
+    x = ~R^2) +
+  theme_bw()
+```
+
+* From the $R^2$ density plot, the distribution of $R^2$ seems to follow a normal distribution, with center around 0.912. Since $R^2$ value falls between 0 and 1, it indicates how much variation in `y` can be explained by `x`. Thus, we can conclude that a majority of the variation in `tmax` is explained by `tmin`.  
+
+
+### Log Function
+
+```{r}
+ggplot(data = boot_strap, aes(x = log_fct)) +
+  geom_density() +
+  labs(
+    title = "Distribution of" ~log(hat(beta)[0] %*% hat(beta)[1]),
+    x = ~log(hat(beta)[0] %*% hat(beta)[1])) +
+  theme_bw()
+```
+
+* The density plot of $log(\hat{\beta}_0 * \hat{\beta}_1)$ appears to be normally distributed, and centered around 2.015.
+
+### 
+
+```{r}
+quantile(pull(results, r_squared), probs = c(.025, .975))
+quantile(pull(results, logB), probs = c(.025, .975))
+
+quantile(boot_strap$r.squared, probs = c(0.025,0.975)) %>% 
+  knitr::kable(caption = "95% CI for r.suqared")
+quantile(boot_strap$log_beta, probs = c(0.025,0.975)) %>% 
+  knitr::kable(caption = "95% CI for log product")
+
+```
+
+* We are 95% confident that the true coefficient of determination falls between 0.89 and 0.93.
+
+* We are 95% confident that the true log of the product of the intercept and slope parameters falls between 1.96 and 2.06.
+Then I will identify the 2.5% and 97.5% quantiles to provide a 95% confidence interval for r.squared and log(β̂ 0∗β̂ 1).  
 
