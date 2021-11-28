@@ -244,21 +244,17 @@ ggplot(data = boot_strap, aes(x = log_fct)) +
 
 * The density plot of $log(\hat{\beta}_0 * \hat{\beta}_1)$ appears to be normally distributed, and centered around 2.015.
 
-### 
+### 2.5% and 97.5% quantiles and a 95% confidence interval
 
 ```{r}
-quantile(pull(results, r_squared), probs = c(.025, .975))
-quantile(pull(results, logB), probs = c(.025, .975))
-
-quantile(boot_strap$r.squared, probs = c(0.025,0.975)) %>% 
-  knitr::kable(caption = "95% CI for r.suqared")
-quantile(boot_strap$log_beta, probs = c(0.025,0.975)) %>% 
-  knitr::kable(caption = "95% CI for log product")
+quantile(pull(boot_strap, r_squared), probs = c(0.025,0.975)) %>% 
+  knitr::kable(col.names = c("Confidence Interval"), caption = "95% CI for R_Suqared", digits = 3)
+quantile(pull(boot_strap, log_fct), probs = c(0.025,0.975)) %>% 
+  knitr::kable(col.names = c("Confidence Interval"), caption = "95% CI for Log Function", digits = 3)
 
 ```
 
-* We are 95% confident that the true coefficient of determination falls between 0.89 and 0.93.
+* The 95% confidence interval of $R^2$ is 0.89 and 0.93.
+* The 95% confidence interval of $log(\hat{\beta}_0 * \hat{\beta}_1)$ is 1.96 and 2.06.
 
-* We are 95% confident that the true log of the product of the intercept and slope parameters falls between 1.96 and 2.06.
-Then I will identify the 2.5% and 97.5% quantiles to provide a 95% confidence interval for r.squared and log(β̂ 0∗β̂ 1).  
 
